@@ -2,6 +2,7 @@ import os
 import discord
 from dotenv import load_dotenv
 from openai import OpenAI
+from lib.config import config
 
 load_dotenv()
 
@@ -10,8 +11,9 @@ bot = discord.Bot()
 
 
 def get_chat_completion(messages):
+	model = config.get('default_chat_model', 'gpt-4o-mini')
 	response = client.chat.completions.create(
-	    model="gpt-4o-mini",
+	    model=model,
 	    messages=messages,
 	)
 	return response.choices[0].message.content
@@ -28,7 +30,6 @@ async def start_chat(
 	messages = [{"role": "system", "content": title_prompt}]
 	title_response = get_chat_completion(messages)
 	thread = await channel.create_thread(name=title_response)
-	# thread = await ctx.message.create_thread(name=title_response)
 
 	prompt = f"""The following is a chat between a discord bot and a user named {ctx.author.name}. The user started a chat with the bot and would like to talk about:\n{topic}.\n\nWrite an inviting message to start the conversation."""
 	messages = [{"role": "system", "content": prompt}]
