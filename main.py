@@ -55,8 +55,10 @@ async def on_message(message):
 	assert thread is not None
 	assert isinstance(thread, discord.Thread)
 
+	system_prompt = f"""The following is a chat between a discord bot and a user named {message.author.name}."""
+
 	msgs = thread.history()
-	chat_history = []
+	chat_history = [{"role": "system", "content": system_prompt}]
 	async for msg in msgs:
 		role = "user" if msg.author == message.author else "assistant"
 		chat_history.append({"role": role, "content": msg.content})
