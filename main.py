@@ -46,12 +46,38 @@ async def get_messages(channel: discord.TextChannel):
 
 
 async def send_scheduled_message(channel_id, user_id, message):
-	# dm the user
 	user = await bot.fetch_user(user_id)
 	user_info = users_info_db.search(Query().user_id == user_id)
+
+	# Generate message using LLM if user info exists
 	if user_info:
-		message = user_info[0]['info'] + '\n' + message
-	await user.send(message)
+		system_prompt = f"""You are a personal assistant helping to motivate and encourage the user.
+Using the following information about the user, generate a personalized morning message:
+
+User Information:
+{user_info[0]['info']}
+
+The message should:
+1. Be encouraging and motivational
+2. Reference specific goals or interests from their information
+3. Include a practical suggestion for the day
+4. Keep a friendly, supportive tone
+
+Original message template: {message}"""
+
+		messages = [{
+		    "role": "system",
+		    "content": system_prompt
+		}, {
+		    "role": "user",
+		    "content": "Generate a personalized morning message."
+		}]
+
+		generated_message = get_chat_completion(messages)
+		await user.send(generated_message)
+	else:
+		# Fall back to original message if no user info
+		await user.send(message)
 
 
 def get_chat_completion(messages):
@@ -146,23 +172,10 @@ async def set_info_file(ctx: discord.ApplicationContext, file: str):
 
 @bot.command(name='test', description='Do whatever the test function does')
 async def test(ctx: discord.ApplicationContext):
-	# echo back the user's info
-	User = Query()
-	user_info = users_info_db.search(User.user_id == ctx.author.id)
-	if user_info:
-		# todo need a helper for sending long messages
-		chunks = text_to_chunks(user_info[0]['info'])
-		last_message = None
-		await ctx.respond("Your info:")
-		for chunk in chunks:
-			if last_message:
-				# reply to the last message
-				last_message = await last_message.reply(chunk)
-			else:
-				# send a new message
-				last_message = await ctx.channel.send(chunk)
-	else:
-		await ctx.respond("No info found")
+	# send the schedule message to the user
+	await ctx.respond("Test function called")
+
+	await send_scheduled_message(ctx.channel.id, ctx.author.id, "Test message")
 
 
 # save_chat - shoves history into json and sends it to the user
